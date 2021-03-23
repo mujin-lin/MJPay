@@ -6,7 +6,7 @@ package com.mujin.enums;
  * @Author: 伍成林
  * @Date： 2021年 03月15日
  */
-public enum  PayTypeEnums {
+public enum PayTypeEnums {
     /**
      * 扫一扫当面支付
      */
@@ -29,14 +29,12 @@ public enum  PayTypeEnums {
      * 信息
      */
     private final String message;
+
     /**
+     * 枚举构造方法
      *
-     * @Title CreditTypeEnum
-     * @Description: 枚举构造方法
-     * @param value 值
+     * @param value   值
      * @param message 信息
-     * @author 伍成林
-     * @date 2021年03月10日
      */
     PayTypeEnums(String value, String message) {
         this.value = value;

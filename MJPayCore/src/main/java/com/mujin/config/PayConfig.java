@@ -1,26 +1,16 @@
 package com.mujin.config;
 
 import com.alipay.api.AlipayApiException;
-import com.alipay.api.AlipayClient;
 import com.alipay.api.CertAlipayRequest;
 import com.alipay.api.DefaultAlipayClient;
-import com.github.wxpay.sdk.WXPay;
-import com.github.wxpay.sdk.WXPayConstants;
 import com.mujin.constants.PropertyNameConstants;
-import com.mujin.utils.PayUtils;
-import com.mujin.utils.PropertyLoadUtil;
+import com.mujin.utils.PropertyLoadUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URL;
-import java.util.Properties;
 
 /**
  * Description:
@@ -53,7 +43,20 @@ public class PayConfig {
      */
     @Bean
     public AliPayConfig createAliPayConfig() throws IOException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-        return PropertyLoadUtil.loadProperties(AliPayConfig.class, PropertyNameConstants.ALI_PAY_SUFFIX);
+        return PropertyLoadUtils.loadProperties(AliPayConfig.class, PropertyNameConstants.ALI_PAY_PREFIX);
+    }
+
+    /**
+     * @return WxConfigs 配置类的对象
+     * @throws IOException               IO异常
+     * @throws InvocationTargetException
+     * @throws NoSuchMethodException
+     * @throws InstantiationException
+     * @throws IllegalAccessException
+     */
+    @Bean
+    public WxConfigs createWxPayConfig() throws IOException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        return PropertyLoadUtils.loadProperties(WxConfigs.class, PropertyNameConstants.WX_PAY_PREFIX);
     }
 
 

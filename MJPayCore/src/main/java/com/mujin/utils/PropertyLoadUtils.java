@@ -1,35 +1,39 @@
 package com.mujin.utils;
 
 
-import com.fasterxml.jackson.databind.PropertyName;
 import com.mujin.annotation.PropertyKey;
 import com.mujin.constants.IntConstants;
 import com.mujin.constants.PropertiesKey;
 import com.mujin.constants.PropertyNameConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.SimpleTypeConverter;
 import org.springframework.beans.TypeConverterSupport;
-import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.util.Assert;
 import org.yaml.snakeyaml.Yaml;
-
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Description:
+ * Description: TODO 暂时不支持bootStrap配置文件的读取
  *
  * @Author: 伍成林
  * @Date： 2021年 03月18日
  */
-public final class PropertyLoadUtil {
+public final class PropertyLoadUtils {
+    /**
+     * 日志输出
+     */
+    private final static Logger Log = LoggerFactory.getLogger(PropertyLoadUtils.class);
+
     /**
      * set方法的前缀
      */
@@ -42,15 +46,6 @@ public final class PropertyLoadUtil {
      * boolean值的is
      */
     private static final String IS_PREFIX = "is";
-
-    /**
-     * 包装类boolean值的simpleName
-     */
-    private static final String PACKAGING_BOOLEAN_TYPE = "Boolean";
-    /**
-     * 基本类型的boolean值的simpleName
-     */
-    private static final String BASE_BOOLEAN_TYPE = "boolean";
     /**
      * 类型转换支持
      */
@@ -59,16 +54,28 @@ public final class PropertyLoadUtil {
      * 匹配占位符的正则
      */
     private static final Pattern PATTERN;
+    /**
+     * 配置文件的map
+     */
+    private volatile static ConcurrentHashMap<String, Properties> PRO_MAP = new ConcurrentHashMap<>(IntConstants.INT_16);
 
     static {
+        // 匹配 ${}的正则表达式
         String regex = "\\$\\{(.*?)}";
+        // 将正则放到里面进行预热处理
         PATTERN = Pattern.compile(regex);
+        // 读取所有的文件
+        try {
+            loadAllProperties();
+        } catch (IOException e) {
+            Log.error("读取配置文件失败：", e);
+        }
     }
 
     /**
      * 私有化工具类的构造器
      */
-    private PropertyLoadUtil() {
+    private PropertyLoadUtils() {
 
     }
 
@@ -100,7 +107,7 @@ public final class PropertyLoadUtil {
         // 设置属性的值
         setFieldValue(fields, tClass, instance, properties, theAssignmentMap);
         // 为方法赋值
-        invokeMethods(declaredMethods, tClass, instance, properties, theAssignmentMap);
+        invokeMethods(declaredMethods, instance, properties, theAssignmentMap);
 
         return instance;
     }
@@ -109,7 +116,6 @@ public final class PropertyLoadUtil {
      * 调用被@PropertyKey修饰的方法
      *
      * @param declaredMethods  Class类中所有的方法
-     * @param tClass           Class对象
      * @param instance         Class对象的实例
      * @param properties       读取出来的配置文件
      * @param theAssignmentMap 是否赋值的map
@@ -117,7 +123,7 @@ public final class PropertyLoadUtil {
      * @throws InvocationTargetException
      * @throws IllegalAccessException
      */
-    private static <T> void invokeMethods(Method[] declaredMethods, Class<T> tClass, T instance, Properties properties, Map<String, Boolean> theAssignmentMap) throws InvocationTargetException, IllegalAccessException {
+    private static <T> void invokeMethods(Method[] declaredMethods, T instance, Properties properties, Map<String, Boolean> theAssignmentMap) throws InvocationTargetException, IllegalAccessException {
         for (Method method : declaredMethods) {
             boolean annotationPresent = method.isAnnotationPresent(PropertyKey.class);
             boolean isSetMethod = method.getName().startsWith(SET_PREFIX);
@@ -140,10 +146,11 @@ public final class PropertyLoadUtil {
                 method.invoke(instance);
                 return;
             }
-            method.invoke(instance, TYPE_CONVERT.convertIfNecessary(properties.get(value), parameterTypes[0]));
+            method.invoke(instance, getObject(properties.getProperty(value), parameterTypes[0]));
         }
 
     }
+
 
     /**
      * 为属性赋值
@@ -179,7 +186,7 @@ public final class PropertyLoadUtil {
             Class<?> fieldType = field.getType();
             Method method = tClass.getMethod(SET_PREFIX + filedName, fieldType);
 
-            method.invoke(instance, TYPE_CONVERT.convertIfNecessary(properties.get(value), fieldType));
+            method.invoke(instance, getObject(properties.getProperty(value), fieldType));
         }
     }
 
@@ -225,38 +232,51 @@ public final class PropertyLoadUtil {
      * @throws IOException 读取配置文件的流异常
      */
     private static Properties loadProperties(String propertiesNameSuffix) throws IOException {
-        Map<String, Properties> propertiesMap = new HashMap<>(IntConstants.INT_16);
-        // 获取根目录路径
-        URL resource = ClassLoader.getSystemResource("");
-        // 创建文件对象
-        File rootFile = new File(resource.getPath());
-        // 读取所有的文件
-        loadAllProperties(rootFile, propertiesMap);
+        if (PRO_MAP.isEmpty()) {
+            throw new IOException("没有读取到任何的properties文件");
+        }
+
         // 读取application.properties文件或者application.yml文件
-        Properties properties = propertiesMap.get(PropertyNameConstants.APPLICATION_SUFFIX + PropertyNameConstants.PROPERTIES_SUFFIX);
+        Properties properties = PRO_MAP.get(PropertyNameConstants.APPLICATION_PREFIX + PropertyNameConstants.PROPERTIES_SUFFIX);
         if (properties == null) {
-            properties = propertiesMap.get(PropertyNameConstants.APPLICATION_SUFFIX + PropertyNameConstants.YML_SUFFIX);
+            properties = PRO_MAP.get(PropertyNameConstants.APPLICATION_PREFIX + PropertyNameConstants.YML_SUFFIX);
             if (properties == null) {
-                throw new IOException(PropertyNameConstants.APPLICATION_SUFFIX + PropertyNameConstants.PROPERTIES_SUFFIX + "或" + PropertyNameConstants.APPLICATION_SUFFIX + PropertyNameConstants.YML_SUFFIX + "配置文件不存在");
+                throw new IOException(PropertyNameConstants.APPLICATION_PREFIX + PropertyNameConstants.PROPERTIES_SUFFIX + "或" + PropertyNameConstants.APPLICATION_PREFIX + PropertyNameConstants.YML_SUFFIX + "配置文件不存在");
             }
         }
         // 获取环境信息
         String active = readActive(properties);
+        Properties pay = null;
         // 获取配置文件
-        if (active == null) {
-            Properties pay = propertiesMap.get(propertiesNameSuffix + PropertyNameConstants.PROPERTIES_SUFFIX);
-            Set<Object> objects = pay.keySet();
-            for (Object key : objects) {
-                Object value = pay.get(key);
-                Object str = regPlaceholder(value + "", properties);
-                if (value.equals(str)) {
-                    continue;
-                }
-                pay.put(key, str);
+        if (active == null || "null".equals(active)) {
+            pay = PRO_MAP.get(propertiesNameSuffix + PropertyNameConstants.PROPERTIES_SUFFIX);
+            if (pay == null || pay.isEmpty()) {
+                throw new FileNotFoundException("没有找到：" + propertiesNameSuffix + PropertyNameConstants.PROPERTIES_SUFFIX);
             }
+            setPropertiesVal(pay, new Properties[]{properties});
             return pay;
         }
-        return propertiesMap.get(propertiesNameSuffix + "-" + PropertyNameConstants.PROPERTIES_SUFFIX);
+        // 考虑多配置文件的时候根据环境变量进行选择
+        String[] split = active.split(",");
+        return manyEnvironmental(split, propertiesNameSuffix);
+    }
+
+    /**
+     * 给配置文件设值
+     *
+     * @param pay        支付相关的配资文件
+     * @param properties 系统核心配置文件 application.properties的一系列文件
+     */
+    private static void setPropertiesVal(Properties pay, Properties[] properties) {
+        Set<Object> objects = pay.keySet();
+        for (Object key : objects) {
+            Object value = pay.get(key);
+            Object str = regPlaceholder(value + "", properties);
+            if (value.equals(str)) {
+                continue;
+            }
+            pay.put(key, str);
+        }
     }
 
     /**
@@ -266,11 +286,11 @@ public final class PropertyLoadUtil {
      * @return 环境信息
      */
     private static String readActive(Properties properties) {
-        Object active = properties.get(PropertiesKey.SPRING_PROFILES_ACTIVE);
-        if (StrUtils.isBlank(active + "")) {
+        String active = properties.getProperty(PropertiesKey.SPRING_PROFILES_ACTIVE);
+        if (StrUtils.isBlank(active)) {
             return null;
         }
-        return active + "";
+        return active;
     }
 
     /**
@@ -289,18 +309,18 @@ public final class PropertyLoadUtil {
             if (properties.length == 1) {
                 String property = properties[0].getProperty(key);
                 if (StrUtils.isBlank(property)) {
-                    throw new IllegalArgumentException("在配置文件application.properties中找不到：" + key);
+                    throw new IllegalArgumentException("在配置文件application.properties中找不到：" + key + " 的配置");
                 }
                 value = value.replace("${" + key + "}", property);
             } else {
                 // 多个配置文件的情况下依次读取
-                for (int i = 0; i < properties.length; i++) {
+                for (int i = properties.length - 1; i >= 0; i--) {
                     String val = properties[i].getProperty(key);
                     if (StrUtils.isNotBlack(val)) {
                         value = value.replace("${" + key + "}", val);
                         break;
                     }
-                    if (i == properties.length - 1 && StrUtils.isBlank(val)) {
+                    if (i == 0 && StrUtils.isBlank(val)) {
                         throw new IllegalArgumentException("在配置文件中找不到：" + key);
                     }
                 }
@@ -311,21 +331,33 @@ public final class PropertyLoadUtil {
     }
 
     /**
+     * 类型转换企且如果转换成了String并且值为"null"则默认赋值为""
+     *
+     * @param property      配置文件的属性
+     * @param parameterType 类的成员属性的类型
+     * @return Object 返回参数转换后的值
+     */
+    private static Object getObject(String property, Class<?> parameterType) {
+        Object o = TYPE_CONVERT.convertIfNecessary(property, parameterType);
+        if (o instanceof String) {
+            if ("null".equals(o + "")) {
+                o = "";
+            }
+        }
+        return o;
+    }
+
+    /**
      * 读取根目录下的问价
      *
-     * @param rootFileDir   根目录的路径
-     * @param propertiesMap 所有读取出来的properties的map
      * @throws IOException
      */
-    private static void loadAllProperties(File rootFileDir, Map<String, Properties> propertiesMap) throws IOException {
-        // yml和properties的正则
-        String regProperties = "\\s+" + PropertyNameConstants.PROPERTIES_SUFFIX;
-        String regYml = "\\s+" + PropertyNameConstants.YML_SUFFIX;
-        // 正则预热
-        Pattern pattern = Pattern.compile(regProperties);
-        Pattern ymlPattern = Pattern.compile(regYml);
+    private static void loadAllProperties() throws IOException {
+        URL resource = ClassLoader.getSystemResource("");
+        // 创建文件对象
+        File rootFile = new File(resource.getPath());
         // 当前目录下的所有文件
-        File[] fileArr = rootFileDir.listFiles();
+        File[] fileArr = rootFile.listFiles();
         // 判断是否有文件
         if (fileArr == null || fileArr.length == 0) {
             return;
@@ -337,26 +369,67 @@ public final class PropertyLoadUtil {
             }
             // 文件名
             String fileName = file.getName();
-            // properties 的匹配
-            Matcher matcher = pattern.matcher(fileName);
-            // yml 的匹配
-            Matcher ymlMatcher = ymlPattern.matcher(fileName);
             // 需要读取的文件名必须包含的字符串
-            boolean isNeedFile = fileName.contains(PropertyNameConstants.ALI_PAY_PROPERTY_NAME) || fileName.contains(PropertyNameConstants.WX_PAY_SUFFIX) || fileName.contains(PropertyNameConstants.APPLICATION_SUFFIX);
+            boolean isNeedFile = fileName.contains(PropertyNameConstants.ALI_PAY_PREFIX) || fileName.contains(PropertyNameConstants.WX_PAY_PREFIX) || fileName.contains(PropertyNameConstants.APPLICATION_PREFIX);
             // 获取输入流
             InputStream resourceStream = new FileInputStream(file);
             // 读取文件成properties类并且保存到map中
-            if (matcher.matches() && isNeedFile) {
+            if (fileName.endsWith(PropertyNameConstants.PROPERTIES_SUFFIX) && isNeedFile) {
                 Properties properties = new Properties();
                 properties.load(resourceStream);
-                propertiesMap.put(fileName, properties);
-                resourceStream.close();
-            } else if (ymlMatcher.matches() && isNeedFile) {
+                PRO_MAP.put(fileName, properties);
+            } else if (fileName.endsWith(PropertyNameConstants.YML_SUFFIX) && isNeedFile) {
                 // 读取yml文件成Properties类
                 Yaml yaml = new Yaml();
                 Properties properties = yaml.loadAs(resourceStream, Properties.class);
-                propertiesMap.put(fileName, properties);
+                PRO_MAP.put(fileName, properties);
             }
+            resourceStream.close();
         }
+    }
+
+    /**
+     * 读取多环境变量中的相应的配置
+     * spring.profiles.active = pro,dev 依照顺序读取 三个环境相同的配置则
+     * application-pro 覆盖 application-dev 覆盖 application
+     * <p>
+     * 支付相关的配置同核心配置文件一样的顺序进行覆盖
+     *
+     * @param actives              配置的环境变量的数组
+     * @param propertiesNameSuffix 支付配置的前缀
+     * @return Properties 返回properties文件
+     * @throws FileNotFoundException
+     */
+    private static Properties manyEnvironmental(String[] actives, String propertiesNameSuffix) throws FileNotFoundException {
+        // 当前支付对象的的融合体
+        Properties payPro = PRO_MAP.get(propertiesNameSuffix + PropertyNameConstants.PROPERTIES_SUFFIX);
+        // Spring 系统配置文件的集合
+        List<Properties> appProList = new ArrayList<>();
+        // 添加原始的application.properties
+        appProList.add(PRO_MAP.get(PropertyNameConstants.APPLICATION_PREFIX + PropertyNameConstants.PROPERTIES_SUFFIX));
+        // 倒序遍历环境配置
+        for (int i = actives.length - 1; i >= 0; i--) {
+            // 获取与环境相馆的配置文件
+            Properties envProperty = PRO_MAP.get(propertiesNameSuffix + "-" + actives[i] + PropertyNameConstants.PROPERTIES_SUFFIX);
+
+            appProList.add(PRO_MAP.get(PropertyNameConstants.APPLICATION_PREFIX + "-" + actives[i] + PropertyNameConstants.PROPERTIES_SUFFIX));
+            // 如果基本的支付配置文件为空则new一个实例
+            if (payPro == null || payPro.isEmpty()) {
+                payPro = new Properties();
+            }
+            // 判断是否有这个配置文件
+            if (envProperty == null) {
+                continue;
+            }
+            // 将环境配置文件倒序put到properties
+            payPro.putAll(envProperty);
+        }
+        // 判空
+        if (payPro.isEmpty()) {
+            throw new FileNotFoundException("没有找到以：" + propertiesNameSuffix + "开头的配置文件");
+        }
+        // 读取配置文件
+        setPropertiesVal(payPro, appProList.toArray(new Properties[0]));
+        return payPro;
     }
 }

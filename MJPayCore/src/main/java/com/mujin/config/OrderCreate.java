@@ -15,37 +15,37 @@ public class OrderCreate {
     /**
      * 时间部分所占长度
      */
-    private static final int TIME_LEN = 41;
+    private final int TIME_LEN = 41;
     /**
      * 数据中心id所占长度
      */
-    private static final int DATA_LEN = 5;
+    private final int DATA_LEN = 5;
     /**
      * 机器id所占长度
      */
-    private static final int WORK_LEN = 5;
+    private final int WORK_LEN = 5;
     /**
      * 毫秒内序列所占长度
      */
-    private static final int SEQ_LEN = 12;
+    private final int SEQ_LEN = 12;
 
     /**
      * 定义起始时间 2015-01-01 00:00:00
      */
-    private static final long START_TIME = 1420041600000L;
+    private final long START_TIME = 1420041600000L;
     /**
      * 上次生成ID的时间截
      */
-    private static long LAST_TIME_STAMP = -1L;
+    private long LAST_TIME_STAMP = -1L;
     /**
      * 时间部分向左移动的位数 22
      */
-    private static final int TIME_LEFT_BIT = 64 - 1 - TIME_LEN;
+    private final int TIME_LEFT_BIT = 64 - 1 - TIME_LEN;
 
     /**
      * 自动获取数据中心id（可以手动定义 0-31之间的数）
      */
-    private final long DATA_ID = getDataId();
+    private long DATA_ID = getDataId();
     /**
      * 自动机器id（可以手动定义 0-31之间的数）
      */
@@ -53,36 +53,32 @@ public class OrderCreate {
     /**
      * 数据中心id最大值 31
      */
-    private static final int DATA_MAX_NUM = ~(-1 << DATA_LEN);
+    private final int DATA_MAX_NUM = ~(-1 << DATA_LEN);
     /**
      * 机器id最大值 31
      */
-    private static final int WORK_MAX_NUM = ~(-1 << WORK_LEN);
+    private final int WORK_MAX_NUM = ~(-1 << WORK_LEN);
     /**
      * 随机获取数据中心id的参数 32
      */
-    private static final int DATA_RANDOM = DATA_MAX_NUM + 1;
+    private final int DATA_RANDOM = DATA_MAX_NUM + 1;
     /**
      * 随机获取机器id的参数 32
      */
-    private static final int WORK_RANDOM = WORK_MAX_NUM + 1;
+    private final int WORK_RANDOM = WORK_MAX_NUM + 1;
     /**
      * 数据中心id左移位数 17
      */
-    private static final int DATA_LEFT_BIT = TIME_LEFT_BIT - DATA_LEN;
+    private final int DATA_LEFT_BIT = TIME_LEFT_BIT - DATA_LEN;
     /**
      * 机器id左移位数 12
      */
-    private static final int WORK_LEFT_BIT = DATA_LEFT_BIT - WORK_LEN;
+    private final int WORK_LEFT_BIT = DATA_LEFT_BIT - WORK_LEN;
 
     /**
      * 上一次的毫秒内序列值
      */
-    private static long LAST_SEQ = 0L;
-    /**
-     * 毫秒内序列的最大值 4095
-     */
-    private static final long SEQ_MAX_NUM = ~(-1 << SEQ_LEN);
+    private long LAST_SEQ = 0L;
 
 
     public synchronized long getId() {
@@ -94,6 +90,10 @@ public class OrderCreate {
         }
 
         if (now == LAST_TIME_STAMP) {
+            /**
+             * 毫秒内序列的最大值 4095
+             */
+            long SEQ_MAX_NUM = ~(-1 << SEQ_LEN);
             LAST_SEQ = (LAST_SEQ + 1) & SEQ_MAX_NUM;
             if (LAST_SEQ == 0) {
                 now = nextMillis(LAST_TIME_STAMP);

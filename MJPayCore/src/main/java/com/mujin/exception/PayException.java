@@ -11,7 +11,7 @@ package com.mujin.exception;
 /**
  * 
  * @Description: TODO
- * @author: 曾明辉
+ * @author: 伍成林
  * @date: 2019年8月14日
  */
 public class PayException extends Exception {
