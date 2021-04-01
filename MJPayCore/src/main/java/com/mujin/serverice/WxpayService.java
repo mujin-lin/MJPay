@@ -11,6 +11,8 @@ import com.mujin.enums.OrderEnums;
 import com.mujin.enums.SuccessEnums;
 import com.mujin.enums.WxCommonEnums;
 import com.mujin.enums.WxPayEnum;
+import com.mujin.exception.ErrCodeEnum;
+import com.mujin.exception.PayException;
 import com.mujin.utils.PayUtils;
 import com.mujin.utils.WxUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -55,11 +57,12 @@ public class WxpayService {
     public ResponseResult<String> createUnifiedOrder(UnifiedOrderDto unifiedOrder, HttpServletRequest request) throws Exception {
 
         Map<String, String> resultMap = this.getUnifiedOrderResult(unifiedOrder);
+        // 请求微信失败返回异常
+        if (WXPayConstants.FAIL.equals(resultMap.get(WxPayEnum.RETURN_CODE.getValue()))){
+            throw new PayException(ErrCodeEnum.SUBMIT_ORDER.getCode(), resultMap.get(WxPayEnum.RETURN_MSG.getValue())))
+        }
 
-        if (WXPayConstants.FAIL.equals())
-
-        if (WXPayConstants.SUCCESS.equals(resultMap.get(WxPayEnum.RETURN_CODE.getValue()))
-                && WXPayConstants.SUCCESS.equals(resultMap.get(WxPayEnum.RESULT_CODE.getValue()))) {
+        if (WXPayConstants.SUCCESS.equals(resultMap.get(WxPayEnum.RESULT_CODE.getValue()))) {
 
             // 预付款成功后需要完成的业务逻辑
 
