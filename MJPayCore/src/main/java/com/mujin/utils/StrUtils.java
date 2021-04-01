@@ -69,7 +69,7 @@ public final class StrUtils {
      * @param str 输入字符串
      * @return boolean
      */
-    public static boolean isNotBlack(String str) {
+    public static boolean isNotBlank(String str) {
         return !isBlank(str);
     }
 

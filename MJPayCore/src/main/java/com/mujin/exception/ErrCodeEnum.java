@@ -15,25 +15,10 @@ package com.mujin.exception;
 public enum ErrCodeEnum {
 
 	/** 
-	* REGISTER: 310跳转注册
+	* SUBMIT_ORDER: 下单异常
 	*/
-	REGISTER(310),
-	/**
-	* AUTH: 401未授权
-	*/
-	AUTH(401),
-	/**
-	 * DATACHECK: 412未满足数据校验
-	 */
-	DATACHECK(412),
-	/**
-	 * BUSINESS: 9990业务异常
-	 */
-	BUSINESS(9990),
-	/**
-	 * THROWABLE: 9999程序异常
-	 */
-	THROWABLE(9999);
+	SUBMIT_ORDER(101);
+
 
 	/**
 	 * 错误代码

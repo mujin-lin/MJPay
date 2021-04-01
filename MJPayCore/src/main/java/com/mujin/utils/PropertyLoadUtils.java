@@ -32,7 +32,7 @@ public final class PropertyLoadUtils {
     /**
      * 日志输出
      */
-    private final static Logger Log = LoggerFactory.getLogger(PropertyLoadUtils.class);
+    private static final Logger log = LoggerFactory.getLogger(PropertyLoadUtils.class);
 
     /**
      * set方法的前缀
@@ -57,7 +57,7 @@ public final class PropertyLoadUtils {
     /**
      * 配置文件的map
      */
-    private volatile static ConcurrentHashMap<String, Properties> PRO_MAP = new ConcurrentHashMap<>(IntConstants.INT_16);
+    private static volatile ConcurrentHashMap<String, Properties> PRO_MAP = new ConcurrentHashMap<>(IntConstants.INT_16);
 
     static {
         // 匹配 ${}的正则表达式
@@ -68,7 +68,7 @@ public final class PropertyLoadUtils {
         try {
             loadAllProperties();
         } catch (IOException e) {
-            Log.error("读取配置文件失败：", e);
+            log.error("读取配置文件失败：", e);
         }
     }
 
@@ -316,7 +316,7 @@ public final class PropertyLoadUtils {
                 // 多个配置文件的情况下依次读取
                 for (int i = properties.length - 1; i >= 0; i--) {
                     String val = properties[i].getProperty(key);
-                    if (StrUtils.isNotBlack(val)) {
+                    if (StrUtils.isNotBlank(val)) {
                         value = value.replace("${" + key + "}", val);
                         break;
                     }

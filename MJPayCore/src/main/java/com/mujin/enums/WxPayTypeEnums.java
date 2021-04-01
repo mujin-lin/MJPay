@@ -6,7 +6,7 @@ package com.mujin.enums;
  * @Author: 伍成林
  * @Date： 2021年 03月15日
  */
-public enum PayTypeEnums {
+public enum WxPayTypeEnums {
     /**
      * 扫一扫当面支付
      */
@@ -36,7 +36,7 @@ public enum PayTypeEnums {
      * @param value   值
      * @param message 信息
      */
-    PayTypeEnums(String value, String message) {
+    WxPayTypeEnums(String value, String message) {
         this.value = value;
         this.message = message;
     }

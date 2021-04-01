@@ -3,7 +3,10 @@ package com.mujin.config;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.CertAlipayRequest;
 import com.alipay.api.DefaultAlipayClient;
+import com.github.wxpay.sdk.WXPay;
+import com.github.wxpay.sdk.WXPayConstants;
 import com.mujin.constants.PropertyNameConstants;
+import com.mujin.utils.PayUtils;
 import com.mujin.utils.PropertyLoadUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -69,12 +72,12 @@ public class PayConfig {
      * @author 伍成林
      * @date 2021年03月17日
      */
-//    @Bean
-//    public WXPay createWxpay(WxConfigs wxConfigs) {
-//        log.info("我的classPath:{}", System.getProperty("java.class.path"));
-//        WXPayConstants.SignType signType = PayUtils.getSignType(wxConfigs.getSignType());
-//        return new WXPay(wxConfigs, signType);
-//    }
+    @Bean
+    public WXPay createWxpay(WxConfigs wxConfigs) {
+        log.info("我的classPath:{}", System.getProperty("java.class.path"));
+        WXPayConstants.SignType signType = PayUtils.getSignType(wxConfigs.getSignType());
+        return new WXPay(wxConfigs, signType);
+    }
     /**
      *
      * @Title createAlipayClient

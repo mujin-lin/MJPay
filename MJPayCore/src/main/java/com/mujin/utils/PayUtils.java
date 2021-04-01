@@ -207,7 +207,7 @@ public class PayUtils {
      * @author 伍成林
      * @date 2020/5/26
      */
-    public static String getTimeExpire(int timeExpress) {
+    public static String getTimeExpire(long timeExpress) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         Date nowDate = new Date();
         Long timeExpireLong = nowDate.getTime() + timeExpress;

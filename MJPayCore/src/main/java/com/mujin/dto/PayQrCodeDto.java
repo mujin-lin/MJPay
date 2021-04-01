@@ -14,6 +14,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PayQrCodeDto {
+    /**
+     * 二维码的字符串
+     */
     private String qrCode;
+    /**
+     * 订单号
+     */
     private String orderNumber;
 }
